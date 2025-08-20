@@ -14,7 +14,7 @@ spec:
       containers:
         - name: mywebapp
           image: harish0604/datastore:v1 
-  replicas: 3
+  replicas: 5
   selector:
     matchLabels:
       type: webapp
