@@ -94,7 +94,7 @@ pipeline {
             fi
 
             # Push using PAT via x-access-token
-            git remote set-url origin "https://$GITHUB_TOKEN_CRED@github.com/Harish6498-git/Kubernetes-ArgoCD.git"
+            git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/Harish6498-git/Kubernetes-ArgoCD.git"
             git push origin HEAD:${Branch} || true
 
             echo "Push completed."
