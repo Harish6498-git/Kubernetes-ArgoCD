@@ -10,7 +10,7 @@ pipeline {
     string(name: 'App_Name',      description: 'App name (used to auto-find manifest, e.g. Datastore)')
     string(name: 'App_Version',   description: 'Image tag to deploy, e.g. 1.2')
     string(name: 'Branch',        defaultValue: 'main', description: 'Git branch to push to')
-    string(name: 'Manifest_Path', defaultValue: '',     description: 'Optional exact manifest path if known')
+    string(name: 'Manifest_Path', defaultValue: 'Datastore/datastore-deploy.yaml',     description: 'Optional exact manifest path if known')
   }
 
   stages {
