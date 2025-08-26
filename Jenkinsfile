@@ -31,6 +31,7 @@ pipeline {
           git commit -m "docker image updated"
           git push https://$GITHUB_TOKEN@github.com/Harish6498-git/Kubernetes-ArgoCD.git HEAD:main
           echo "------------------ Pushed Changes Successfully --------------------"
+        """
       }
     }
   }
