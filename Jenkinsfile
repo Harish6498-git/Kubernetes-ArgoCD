@@ -7,10 +7,10 @@ pipeline {
   }
 
   parameters {
-    string(name: 'App_Name',        description: 'App name (used to auto-find manifest, e.g. datastore-deploy)')
-    string(name: 'App_Version',     description: 'Image tag to deploy, e.g. 1.2')
-    string(name: 'Branch',          defaultValue: 'main', description: 'Git branch to push to')
-    string(name: 'Manifest_Path',   defaultValue: '',     description: 'Optional exact manifest path if you know it')
+    string(name: 'App_Name',      description: 'App name (used to auto-find manifest, e.g. Datastore)')
+    string(name: 'App_Version',   description: 'Image tag to deploy, e.g. 1.2')
+    string(name: 'Branch',        defaultValue: 'main', description: 'Git branch to push to')
+    string(name: 'Manifest_Path', defaultValue: '',     description: 'Optional exact manifest path if known')
   }
 
   stages {
@@ -28,14 +28,14 @@ pipeline {
     stage('Update image in manifest') {
       steps {
         sh '''
-          set -euo pipefail
+          set -eu
 
-          # 1) Resolve the manifest to edit
+          # Decide which manifest to edit
           FILE=""
           if [ -n "${Manifest_Path}" ] && [ -f "${Manifest_Path}" ]; then
             FILE="${Manifest_Path}"
           else
-            # Try common locations based on App_Name
+            # Try common locations using App_Name
             for f in "./${App_Name}.yaml" "./${App_Name}.yml" "./${App_Name}/${App_Name}.yaml" "./${App_Name}/${App_Name}.yml"; do
               if [ -f "$f" ]; then FILE="$f"; break; fi
             done
@@ -53,11 +53,11 @@ pipeline {
             exit 1
           fi
 
+          echo "$FILE" > .manifest_path
           echo "Using manifest: $FILE"
 
-          # 2) Update the image line while preserving indentation
-          # Replaces:    image: anything
-          # With:        image: harish0604/datastore:${App_Version}
+          # Replace the image value while keeping indentation
+          # image: <anything>  ->  image: harish0604/datastore:${App_Version}
           sed -i -E "s|(^[[:space:]]*image:[[:space:]]*).*$|\\1harish0604/datastore:${App_Version}|" "$FILE"
 
           echo "Preview changes:"
@@ -70,19 +70,23 @@ pipeline {
       steps {
         withCredentials([string(credentialsId: "${GITHUB_TOKEN_CRED}", variable: 'GITHUB_TOKEN')]) {
           sh '''
-            set -euo pipefail
+            set -eu
 
-            # Configure git identity & mark workspace safe
+            FILE="$(cat .manifest_path 2>/dev/null || true)"
+            if [ -z "$FILE" ] || [ ! -f "$FILE" ]; then
+              echo "ERROR: .manifest_path missing or file not found; aborting commit."
+              exit 1
+            fi
+
+            # Git identity & safe directory
             git config user.name  "jenkins"
             git config user.email "jenkins@local"
             git config --global --add safe.directory "$PWD" || true
 
-            # Stage only YAML files that changed
-            if git status --porcelain | grep -E '\\.ya?ml$' >/dev/null 2>&1; then
-              git add $(git status --porcelain | awk '/\\.ya?ml$/ {print $2}')
-            fi
+            # Stage only the file we touched
+            git add "$FILE" || true
 
-            # Commit iff something is staged
+            # Commit if staged changes exist
             if ! git diff --cached --quiet; then
               git commit -m "chore(${App_Name}): bump image to harish0604/datastore:${App_Version}"
             else
